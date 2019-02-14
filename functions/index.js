@@ -13,7 +13,7 @@ exports.addCreatedAtMessage = functions.firestore
             .collection("messages")
             .doc(snap.id)
             .set({
-              createdAt: newcreatedAt.toString()
+              createdAt: newcreatedAt
             }, {merge: true})
             .catch(err => console.log(err))
   });
@@ -28,7 +28,7 @@ exports.addCreatedAtMessage = functions.firestore
             .collection("comments")
             .doc(snap.id)
             .set({
-              createdAt: newcreatedAt.toString()
+              createdAt: newcreatedAt
             }, {merge: true})
             .catch(err => console.log(err))
   });
@@ -43,7 +43,7 @@ exports.addCreatedAtMessage = functions.firestore
           .collection("users")
           .doc(snap.id)
           .set({
-            createdAt: newcreatedAt.toString()
+            createdAt: newcreatedAt
           }, {merge: true})
           .catch(err => console.log(err))
   });
@@ -58,7 +58,7 @@ exports.addCreatedAtMessage = functions.firestore
             .collection("posts")
             .doc(snap.id)
             .set({
-              createdAt: newcreatedAt.toString()
+              createdAt: newcreatedAt
             }, {merge: true})
             .catch(err => console.log(err))
   });
