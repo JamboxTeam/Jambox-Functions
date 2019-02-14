@@ -9,12 +9,11 @@ exports.addCreatedAtMessage = functions.firestore
   .onCreate((snap, context) => {
     const newcreatedAt = Date.now();
       
-    admin.firestore()
+    return admin.firestore()
             .collection("messages")
             .doc(snap.id)
             .set({
-              createdAt: newcreatedAt.toString(),
-              serverTimestamp: admin.firestore().FieldValue.serverTimestamp().toString()
+              createdAt: newcreatedAt.toString()
             }, {merge: true})
             .catch(err => console.log(err))
   });
@@ -25,12 +24,11 @@ exports.addCreatedAtMessage = functions.firestore
   .onCreate((snap, context) => {
     const newcreatedAt = Date.now();
     
-    admin.firestore()
+    return admin.firestore()
             .collection("comments")
             .doc(snap.id)
             .set({
-              createdAt: newcreatedAt.toString(),
-              serverTimestamp: admin.firestore().FieldValue.serverTimestamp().toString()
+              createdAt: newcreatedAt.toString()
             }, {merge: true})
             .catch(err => console.log(err))
   });
@@ -41,12 +39,11 @@ exports.addCreatedAtMessage = functions.firestore
   .onCreate((snap, context) => {
     const newcreatedAt = Date.now();
 
-    admin.firestore()
+    return admin.firestore()
           .collection("users")
           .doc(snap.id)
           .set({
-            createdAt: newcreatedAt.toString(),
-            serverTimestamp: admin.firestore().FieldValue.serverTimestamp().toString()
+            createdAt: newcreatedAt.toString()
           }, {merge: true})
           .catch(err => console.log(err))
   });
@@ -57,12 +54,11 @@ exports.addCreatedAtMessage = functions.firestore
   .onCreate((snap, context) => {
     const newcreatedAt = Date.now();
 
-      admin.firestore()
+    return admin.firestore()
             .collection("posts")
             .doc(snap.id)
             .set({
-              createdAt: newcreatedAt.toString(),
-              serverTimestamp: admin.firestore().FieldValue.serverTimestamp().toString()
+              createdAt: newcreatedAt.toString()
             }, {merge: true})
             .catch(err => console.log(err))
   });
