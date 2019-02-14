@@ -14,7 +14,7 @@ exports.addCreatedAtMessage = functions.firestore
       .doc(snap.id) 
       .update({
         createdAt: newcreatedAt.toString(),
-        serverTimestamp: admin.firestore().FieldValue.serverTimestamp()
+        serverTimestamp: admin.firestore().FieldValue.serverTimestamp().toString()
       })
       .catch(err => console.log(err));
   });
@@ -30,7 +30,7 @@ exports.addCreatedAtMessage = functions.firestore
       .doc(snap.id) 
       .update({
         createdAt: newcreatedAt.toString(),
-        serverTimestamp: admin.firestore().FieldValue.serverTimestamp()
+        serverTimestamp: admin.firestore().FieldValue.serverTimestamp().toString()
       })
       .catch(err => console.log(err));
   });
@@ -46,7 +46,7 @@ exports.addCreatedAtMessage = functions.firestore
       .doc(snap.id) 
       .update({
         createdAt: newcreatedAt.toString(),
-        serverTimestamp: admin.firestore().FieldValue.serverTimestamp()
+        serverTimestamp: admin.firestore().FieldValue.serverTimestamp().toString()
       })
       .catch(err => console.log(err));
   });
@@ -62,7 +62,7 @@ exports.addCreatedAtMessage = functions.firestore
       .doc(snap.id) 
       .update({
         createdAt: newcreatedAt.toString(),
-        serverTimestamp: admin.firestore().FieldValue.serverTimestamp()
+        serverTimestamp: admin.firestore().FieldValue.serverTimestamp().toString()
       })
       .catch(err => console.log(err));
   });
