@@ -7,7 +7,7 @@ admin.initializeApp();
 exports.addCreatedAtMessage = functions.firestore
   .document("messages/{messageId}")
   .onCreate((snap, context) => {
-    const newcreatedAt = Date.now();
+    const newcreatedAt = new Date();
       
     return admin.firestore()
             .collection("messages")
@@ -22,7 +22,7 @@ exports.addCreatedAtMessage = functions.firestore
   exports.addCreatedAtComment = functions.firestore
   .document("comments/{commentId}")
   .onCreate((snap, context) => {
-    const newcreatedAt = Date.now();
+    const newcreatedAt = new Date();
     
     return admin.firestore()
             .collection("comments")
@@ -37,7 +37,7 @@ exports.addCreatedAtMessage = functions.firestore
   exports.addCreatedAtUser = functions.firestore
   .document("users/{userId}")
   .onCreate((snap, context) => {
-    const newcreatedAt = Date.now();
+    const newcreatedAt = new Date();
 
     return admin.firestore()
           .collection("users")
@@ -52,7 +52,7 @@ exports.addCreatedAtMessage = functions.firestore
   exports.addCreatedAtPost = functions.firestore
   .document("posts/{postId}")
   .onCreate((snap, context) => {
-    const newcreatedAt = Date.now();
+    const newcreatedAt = new Date();
 
     return admin.firestore()
             .collection("posts")
