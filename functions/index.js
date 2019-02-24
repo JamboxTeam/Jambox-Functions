@@ -104,7 +104,7 @@ exports.onPostLike = functions.firestore.document("likes/{likeId}")
     };
     console.log(payload)
 
-    admin.messaging().sendToDevice(userToken, payload)
+    return admin.messaging().sendToDevice(userToken, payload)
       .then((respone) => {
         console.log('Successfully sent message:', respone);
       })
