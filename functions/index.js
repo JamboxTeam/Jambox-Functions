@@ -64,18 +64,37 @@ exports.addCreatedAtPost = functions.firestore
   });
 
 exports.onPostLike = functions.firestore.document("likes/{likeId}")
-  .onCreate((snapshot, context) => {
-        const data = snap.data();
+  .onCreate((snap, context) => {
+    const data = snap.data();
+    var postId = data.postId;
+    var userId;
+    var userToken;
+    var likerName;
     console.log(data)
-    const post = admin.firestore().collection("posts").doc(data.postId).get();
-    const userId = post.UserID
 
-    const token = admin.firestore().collection("tokens").doc(userId).get();
-    const userToken = token.token
+    admin.firestore().collection("posts").doc(postId).get().then(post => {
+      userId = post.UserID
+      console.log(userId)
+    });
 
-    const liker = admin.firestore().collection("users").doc(data.userId).get();
-    const likerName = liker.displayName
+    admin.firestore().collection("tokens").doc(userId).get().then(token => {
+      userToken = token.token
+      console.log(userToken)
+    });
 
+    admin.firestore().collection("users").doc(data.userId).get().then(user => {
+      likerName = user.displayName
+      console.log(likerName)
+    });
+
+    // const message = {
+    //   data: {
+    //     title: 'Jambox App',
+    //     body: `${likerName} liked your post!`
+    //   },
+    //   token: userToken
+    // };
+    // console.log(message)
 
     const payload = {
       notification: {
@@ -83,6 +102,21 @@ exports.onPostLike = functions.firestore.document("likes/{likeId}")
         body: likerName + ' liked your post'
       }
     };
+    console.log(payload)
 
     admin.messaging().sendToDevice(userToken, payload)
+      .then((respone) => {
+        console.log('Successfully sent message:', respone);
+      })
+      .catch((error) => {
+        console.log('Error sending message', error)
+      });
+
+    // admin.messaging().send(message)
+    //   .then((respone) => {
+    //     console.log('Successfully sent message:', respone);
+    //   })
+    //   .catch((error) => {
+    //     console.log('Error sending message', error)
+    //   });
   });
