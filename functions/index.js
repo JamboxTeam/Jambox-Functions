@@ -90,18 +90,18 @@ exports.onPostLike = functions.firestore
 
     return postRef
       .get()
-      .then(function(postdoc) {
+      .then(function (postdoc) {
         //POST DOC
         if (postdoc.exists) {
           console.log("postdoc: ", postdoc.data().UserID);
           db.collection("tokens")
             .doc(postdoc.data().UserID)
             .get()
-            .then(function(tokendoc) {
+            .then(function (tokendoc) {
               //TOKEN DOC
               console.log("tokenDoc: ", tokendoc.data().token);
               userToken = tokendoc.data().token;
-              userRef.get().then(function(userdoc) {
+              userRef.get().then(function (userdoc) {
                 //USER DOC
                 console.log("userDoc: ", userdoc);
                 let username = userdoc.data().displayName;
@@ -131,7 +131,7 @@ exports.onPostLike = functions.firestore
           console.log("No such document!");
         }
       })
-      .catch(function(error) {
+      .catch(function (error) {
         console.log("Error getting document:", error);
       });
   });
@@ -147,7 +147,7 @@ exports.onMessageAdd = functions.firestore
 
     return privateChatsRef
       .get()
-      .then(function(privateChatDoc) {
+      .then(function (privateChatDoc) {
         //PRIVATE CHAT DOC
         if (privateChatDoc.exists) {
           console.log("privatechatdoc ", privateChatDoc.data());
@@ -210,17 +210,24 @@ exports.onMessageAdd = functions.firestore
                       console.log("Error sending message", error);
                     });
                 });
-              });
             }
-              //end loop
+            //end loop
           });
         } else {
           console.log("No such document");
         }
       })
-      .catch(function(error) {
+      .catch(function (error) {
         console.log("Error getting document: ", error);
       });
   });
 
+exports.getUsersFollowerCount = functions.https.onRequest((req, res) => {
 
+  const followedId = req.uid;
+  const db = admin.firestore();
+  var followers = db.collection("relationships")
+  var query = followers.where('followedid', '==', followedId).get()
+
+  return query.length
+});
