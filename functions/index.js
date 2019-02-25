@@ -69,60 +69,97 @@ exports.onPostLike = functions.firestore.document("likes/{likeId}")
     const data = snap.data();
     var userRef = db.collection("users").doc(data.userId);
     var postRef = db.collection("posts").doc(data.postId);
-    var username = '';
     var userToken = '';
-    var postUserID;
 
-    postRef.get().then(function (postdoc) {
+    return postRef.get().then(function(postdoc) {
+    //POST DOC
       if (postdoc.exists) {
-        console.log(postdoc)
-        postUserID = postdoc.data().UserID;
+        console.log("postdoc: ", postdoc.data().UserID)
+        db.collection("tokens").doc(postdoc.data().UserID).get().then(function(tokendoc) {
+        //TOKEN DOC
+            console.log("tokenDoc: ", tokendoc.data().token);
+            userToken = tokendoc.data().token;
+            userRef.get().then(function(userdoc) {
+            //USER DOC
+                console.log("userDoc: ", userdoc);
+                let username = userdoc.data().displayName;
+                console.log("username: ", username)
+
+                var message = {
+                  data: {
+                    title: 'Jambox App',
+                    body: `${username} liked your post!`
+                  },
+                  token: userToken
+                };
+                console.log(message)
+
+                admin.messaging().send(message)
+                  .then((respone) => {
+                    console.log('Successfully sent message:', respone);
+                  })
+                  .catch((error) => {
+                    console.log('Error sending message', error)
+                  });
+              });
+          });
+      } else {
+          console.log("No such document!");
       }
-      else {
-        console.log("No such document");
-      }
-    }).catch(function (error) {
-      console.log("Error getting document: ", error);
+    }).catch(function(error) {
+        console.log("Error getting document:", error);
     });
 
-    db.collection("tokens").doc(postUserID).get().then(function (tokenDoc) {
-      if (tokenDoc.exists) {
-        console.log(tokenDoc)
-        userToken = tokenDoc.data().token;
-      }
-      else {
-        console.log("No such document");
-      }
-    }).catch(function (error) {
-      console.log("Error getting document: ", error);
-    });
+    // postRef.get().then(function(postdoc) {
+    //   if(postdoc.exists){
+    //     console.log(postdoc)
+    //     postUserID = postdoc.data().UserID;
+    //   }
+    //   else {
+    //     console.log("No such document");
+    //   }
+    // }).catch(function(error) {
+    //   console.log("Error getting document: ", error);
+    // });
 
-    userRef.get().then(function (userDoc) {
-      if (userDoc.exists) {
-        console.log(userDoc)
-        username = userDoc.data().displayName;
-      }
-      else {
-        console.log("No such document");
-      }
-    }).catch(function (error) {
-      console.log("Error getting document: ", error);
-    });
+    // db.collection("tokens").doc(postUserID).get().then(function(tokenDoc) {
+    //   if(tokenDoc.exists){
+    //     console.log(tokenDoc)
+    //     userToken = tokenDoc.data().token;
+    //   }
+    //   else {
+    //     console.log("No such document");
+    //   }
+    // }).catch(function(error) {
+    //   console.log("Error getting document: ", error);
+    // });
 
-    var message = {
-      data: {
-        title: 'Jambox App',
-        body: `${username} liked your post!`
-      },
-      token: userToken
-    };
-    console.log(message)
+    // userRef.get().then(function(userDoc) {
+    //   if(userDoc.exists){
+    //     console.log(userDoc)
+    //     username = userDoc.data().displayName;
+    //   }
+    //   else {
+    //     console.log("No such document");
+    //   }
+    // }).catch(function(error) {
+    //   console.log("Error getting document: ", error);
+    // });
 
-    return admin.messaging().send(message)
-      .then((respone) => {
-        console.log('Successfully sent message:', respone);
-      })
-      .catch((error) => {
-        console.log('Error sending message', error)
-      });
+    // var message = {
+    //   data: {
+    //     title: 'Jambox App',
+    //     body: `${username} liked your post!`
+    //   },
+    //   token: userToken
+    // };
+    // console.log(message)
+
+    // return admin.messaging().send(message)
+    //   .then((respone) => {
+    //     console.log('Successfully sent message:', respone);
+    //   })
+    //   .catch((error) => {
+    //     console.log('Error sending message', error)
+    //   }); 
   });
