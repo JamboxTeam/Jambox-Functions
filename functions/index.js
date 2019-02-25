@@ -141,7 +141,6 @@ exports.onMessageAdd = functions.firestore
   .onCreate((snap, context) => {
     const db = admin.firestore();
     const data = snap.data();
-    const createdAtDate = data.createdAt;
     var privateChatsRef = db.collection("privatechats").doc(data.chatRoomID);
     var senderRef = db.collection("users").doc(data.senderID);
 
@@ -165,36 +164,10 @@ exports.onMessageAdd = functions.firestore
                   console.log("senderDoc", senderDoc.data());
                   let username = senderDoc.data().displayName;
 
-                  //
-                  var value;
-                  var newDateMilliseconds = new Date().getTime();
-                  var seconds = (newDateMilliseconds / 1000) - createdAtDate.seconds;
-                  var minutes = seconds / 60;
-                  var hours = minutes / 60;
-                  var days = hours / 24;
-
-                  if(round(seconds, 0) < 60)
-                    value = round(seconds, 0).toString() + "s ago";
-                  else if(round(minutes, 0) < 60)
-                    value = round(minutes, 0).toString() + "m ago";
-                  else if(round(minutes, 0) >= 60 && round(hours, 0) < 24)
-                    value = round(hours, 0).toString() + "h ago";
-                  else
-                    value = round(days, 0).toString() + "d ago";
-
-                  function round(number, precision){
-                      var factor = Math.pow(10, precision);
-                      var tempNumber = number * factor;
-                      var roundedTempNumber = Math.round(tempNumber);
-                  
-                      return roundedTempNumber / factor;
-                  }
-                  //
-
                   var message = {
                     data: {
                       title: `${username}`,
-                      body: `${data.message} ${value}`
+                      body: `${data.message}`
                     },
                     token: userToken
                   };
@@ -209,6 +182,7 @@ exports.onMessageAdd = functions.firestore
                     .catch(error => {
                       console.log("Error sending message", error);
                     });
+                  });
                 });
             }
             //end loop
@@ -220,6 +194,47 @@ exports.onMessageAdd = functions.firestore
       .catch(function (error) {
         console.log("Error getting document: ", error);
       });
+  });
+
+exports.onFollowAdd = functions.firestore
+  .document("relationships/{relationshipId}")
+  .onCreate((snap, context) => {
+    const db = admin.firestore();
+    const data = snap.data();
+    var tokenRef = db.collection("privatechats").doc(data.followedId);
+    var followerRef = db.collection("users").doc(data.followerId);
+
+    return tokenRef.get().then(function(tokenDoc) {
+    //TOKEN DOC
+      var userToken = tokenDoc.data().token;
+      followerRef.get().then(function(followerDoc) {
+      //FOLLOWER DOC
+        var username = followerDoc.data().displayName;
+
+        var message = {
+          data: {
+            title: `You just got followed`,
+            body: `${username} started following you!`
+          },
+          token: userToken
+        };
+        console.log(message);
+
+        admin
+          .messaging()
+          .send(message)
+          .then(respone => {
+            console.log("Successfully sent message:", respone);
+          })
+          .catch(error => {
+            console.log("Error sending message", error);
+          });
+
+      });
+    })
+    .catch(function (error) {
+      console.log("Error getting document: ", error);
+    });
   });
 
 exports.getUsersFollowerCount = functions.https.onRequest((req, res) => {
