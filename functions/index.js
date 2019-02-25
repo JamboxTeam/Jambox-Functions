@@ -164,12 +164,28 @@ exports.onMessageAdd = functions.firestore
                   console.log("senderDoc", senderDoc.data());
                   let username = senderDoc.data().displayName;
 
-                  let time = new Date().setSeconds() - createdAt.seconds;
+                  //
+                  var value;
+                  var newDateMilliseconds = new Date().getTime();
+                  var seconds = (newDateMilliseconds / 1000) - date.seconds;
+                  var minutes = seconds / 60;
+                  var hours = minutes / 60;
+                  var days = hours / 24;
+
+                  if(round(seconds, 0) < 60)
+                    value = round(seconds, 0).toString() + "s ago";
+                  else if(round(minutes, 0) < 60)
+                    value = round(minutes, 0).toString() + "m ago";
+                  else if(round(minutes, 0) >= 60 && round(hours, 0) < 24)
+                    value = round(hours, 0).toString() + "h ago";
+                  else
+                    value = round(days, 0).toString() + "d ago";
+                  //
 
                   var message = {
                     data: {
                       title: `${username}`,
-                      body: `${data.message} ${time}`
+                      body: `${data.message} ${value}`
                     },
                     token: userToken
                   };
@@ -197,3 +213,11 @@ exports.onMessageAdd = functions.firestore
         console.log("Error getting document: ", error);
       });
   });
+
+  function round(number, precision){
+    var factor = Math.pow(10, precision);
+    var tempNumber = number * factor;
+    var roundedTempNumber = Math.round(tempNumber);
+
+    return roundedTempNumber / factor;
+  }
