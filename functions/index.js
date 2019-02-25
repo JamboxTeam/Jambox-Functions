@@ -201,11 +201,12 @@ exports.onFollowAdd = functions.firestore
   .onCreate((snap, context) => {
     const db = admin.firestore();
     const data = snap.data();
-    var tokenRef = db.collection("privatechats").doc(data.followedId);
+    var tokenRef = db.collection("tokens").doc(data.followedId);
     var followerRef = db.collection("users").doc(data.followerId);
 
     return tokenRef.get().then(function(tokenDoc) {
     //TOKEN DOC
+    console.log(tokenDoc.data());
       var userToken = tokenDoc.data().token;
       followerRef.get().then(function(followerDoc) {
       //FOLLOWER DOC
