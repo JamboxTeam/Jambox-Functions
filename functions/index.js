@@ -90,18 +90,18 @@ exports.onPostLike = functions.firestore
 
     return postRef
       .get()
-      .then(function(postdoc) {
+      .then(function (postdoc) {
         //POST DOC
         if (postdoc.exists) {
           console.log("postdoc: ", postdoc.data().UserID);
           db.collection("tokens")
             .doc(postdoc.data().UserID)
             .get()
-            .then(function(tokendoc) {
+            .then(function (tokendoc) {
               //TOKEN DOC
               console.log("tokenDoc: ", tokendoc.data().token);
               userToken = tokendoc.data().token;
-              userRef.get().then(function(userdoc) {
+              userRef.get().then(function (userdoc) {
                 //USER DOC
                 console.log("userDoc: ", userdoc);
                 let username = userdoc.data().displayName;
@@ -131,7 +131,7 @@ exports.onPostLike = functions.firestore
           console.log("No such document!");
         }
       })
-      .catch(function(error) {
+      .catch(function (error) {
         console.log("Error getting document:", error);
       });
   });
@@ -146,78 +146,88 @@ exports.onMessageAdd = functions.firestore
 
     return privateChatsRef
       .get()
-      .then(function(privateChatDoc) {
+      .then(function (privateChatDoc) {
         //PRIVATE CHAT DOC
         if (privateChatDoc.exists) {
           console.log("privatechatdoc ", privateChatDoc.data());
           privateChatDoc.data().members.forEach(member => {
-            if(member != data.senderID){
-            db.collection("tokens")
-              .doc(member)
-              .get()
-              .then(function(tokenDoc) {
-                //TOKEN DOC
-                console.log("tokenDoc", tokenDoc.data());
-                let userToken = tokenDoc.data().token;
-                senderRef.get().then(function(senderDoc) {
-                  //SENDER DOC
-                  console.log("senderDoc", senderDoc.data());
-                  let username = senderDoc.data().displayName;
+            if (member != data.senderID) {
+              db.collection("tokens")
+                .doc(member)
+                .get()
+                .then(function (tokenDoc) {
+                  //TOKEN DOC
+                  console.log("tokenDoc", tokenDoc.data());
+                  let userToken = tokenDoc.data().token;
+                  senderRef.get().then(function (senderDoc) {
+                    //SENDER DOC
+                    console.log("senderDoc", senderDoc.data());
+                    let username = senderDoc.data().displayName;
 
-                  //
-                  var value;
-                  var newDateMilliseconds = new Date().getTime();
-                  var seconds = (newDateMilliseconds / 1000) - date.seconds;
-                  var minutes = seconds / 60;
-                  var hours = minutes / 60;
-                  var days = hours / 24;
+                    //
+                    var value;
+                    var newDateMilliseconds = new Date().getTime();
+                    var seconds = (newDateMilliseconds / 1000) - date.seconds;
+                    var minutes = seconds / 60;
+                    var hours = minutes / 60;
+                    var days = hours / 24;
 
-                  if(round(seconds, 0) < 60)
-                    value = round(seconds, 0).toString() + "s ago";
-                  else if(round(minutes, 0) < 60)
-                    value = round(minutes, 0).toString() + "m ago";
-                  else if(round(minutes, 0) >= 60 && round(hours, 0) < 24)
-                    value = round(hours, 0).toString() + "h ago";
-                  else
-                    value = round(days, 0).toString() + "d ago";
-                  //
+                    if (round(seconds, 0) < 60)
+                      value = round(seconds, 0).toString() + "s ago";
+                    else if (round(minutes, 0) < 60)
+                      value = round(minutes, 0).toString() + "m ago";
+                    else if (round(minutes, 0) >= 60 && round(hours, 0) < 24)
+                      value = round(hours, 0).toString() + "h ago";
+                    else
+                      value = round(days, 0).toString() + "d ago";
+                    //
 
-                  var message = {
-                    data: {
-                      title: `${username}`,
-                      body: `${data.message} ${value}`
-                    },
-                    token: userToken
-                  };
-                  console.log(message);
+                    var message = {
+                      data: {
+                        title: `${username}`,
+                        body: `${data.message} ${value}`
+                      },
+                      token: userToken
+                    };
+                    console.log(message);
 
-                  admin
-                    .messaging()
-                    .send(message)
-                    .then(respone => {
-                      console.log("Successfully sent message:", respone);
-                    })
-                    .catch(error => {
-                      console.log("Error sending message", error);
-                    });
+                    admin
+                      .messaging()
+                      .send(message)
+                      .then(respone => {
+                        console.log("Successfully sent message:", respone);
+                      })
+                      .catch(error => {
+                        console.log("Error sending message", error);
+                      });
+                  });
                 });
-              });
             }
-              //end loop
+            //end loop
           });
         } else {
           console.log("No such document");
         }
       })
-      .catch(function(error) {
+      .catch(function (error) {
         console.log("Error getting document: ", error);
       });
   });
 
-  function round(number, precision){
-    var factor = Math.pow(10, precision);
-    var tempNumber = number * factor;
-    var roundedTempNumber = Math.round(tempNumber);
+function round(number, precision) {
+  var factor = Math.pow(10, precision);
+  var tempNumber = number * factor;
+  var roundedTempNumber = Math.round(tempNumber);
 
-    return roundedTempNumber / factor;
-  }
+  return roundedTempNumber / factor;
+}
+
+exports.getUsersFollowerCount = functions.https.onRequest((req, res) => {
+
+  const followedId = req.uid;
+  const db = admin.firestore();
+  var followers = db.collection("relationships")
+  var query = followers.where('followedid', '==', followedId).get()
+
+  return query.length
+});
