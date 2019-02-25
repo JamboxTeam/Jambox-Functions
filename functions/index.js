@@ -141,6 +141,7 @@ exports.onMessageAdd = functions.firestore
   .onCreate((snap, context) => {
     const db = admin.firestore();
     const data = snap.data();
+    const createdAtDate = data.createdAt;
     var privateChatsRef = db.collection("privatechats").doc(data.chatRoomID);
     var senderRef = db.collection("users").doc(data.senderID);
 
@@ -167,7 +168,7 @@ exports.onMessageAdd = functions.firestore
                   //
                   var value;
                   var newDateMilliseconds = new Date().getTime();
-                  var seconds = (newDateMilliseconds / 1000) - date.seconds;
+                  var seconds = (newDateMilliseconds / 1000) - createdAtDate.seconds;
                   var minutes = seconds / 60;
                   var hours = minutes / 60;
                   var days = hours / 24;
@@ -180,6 +181,14 @@ exports.onMessageAdd = functions.firestore
                     value = round(hours, 0).toString() + "h ago";
                   else
                     value = round(days, 0).toString() + "d ago";
+
+                  function round(number, precision){
+                      var factor = Math.pow(10, precision);
+                      var tempNumber = number * factor;
+                      var roundedTempNumber = Math.round(tempNumber);
+                  
+                      return roundedTempNumber / factor;
+                  }
                   //
 
                   var message = {
@@ -214,10 +223,4 @@ exports.onMessageAdd = functions.firestore
       });
   });
 
-  function round(number, precision){
-    var factor = Math.pow(10, precision);
-    var tempNumber = number * factor;
-    var roundedTempNumber = Math.round(tempNumber);
 
-    return roundedTempNumber / factor;
-  }
