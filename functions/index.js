@@ -251,7 +251,7 @@ exports.onCommentAdd = functions.firestore
 
     return postRef.get().then(function(postDoc) {
     //POSTDOC
-    console.log(postDoc);
+    console.log(postDoc.data());
     if(postDoc.data().UserID != data.UserID) {
       db.collection("tokens").doc(postDoc.data().UserID).get()
         .then(function(tokenDoc) {
