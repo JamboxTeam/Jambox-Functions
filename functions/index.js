@@ -79,6 +79,7 @@ exports.addCreatedAtPost = functions.firestore
       .catch(err => console.log(err));
   });
 
+//Sends notification when someone likes your post
 exports.onPostLike = functions.firestore
   .document("likes/{likeId}")
   .onCreate((snap, context) => {
@@ -136,6 +137,7 @@ exports.onPostLike = functions.firestore
       });
   });
 
+//Sends notification when someone messages you
 exports.onMessageAdd = functions.firestore
   .document("messages/{messageId}")
   .onCreate((snap, context) => {
@@ -166,8 +168,8 @@ exports.onMessageAdd = functions.firestore
 
                   var message = {
                     data: {
-                      title: `${username}`,
-                      body: `${data.message}`
+                      title: `Jambox`,
+                      body: `${username}: ${data.message}`
                     },
                     token: userToken
                   };
@@ -196,6 +198,7 @@ exports.onMessageAdd = functions.firestore
       });
   });
 
+//Sends notification when someone follows you
 exports.onFollowAdd = functions.firestore
   .document("relationships/{relationshipId}")
   .onCreate((snap, context) => {
@@ -214,7 +217,7 @@ exports.onFollowAdd = functions.firestore
 
         var message = {
           data: {
-            title: `You just got followed`,
+            title: `Jambox`,
             body: `${username} started following you!`
           },
           token: userToken
@@ -238,7 +241,49 @@ exports.onFollowAdd = functions.firestore
     });
   });
 
-exports.getUsersFollowerCount = functions.https.onRequest((req, res) => {
+//Sends notification when someone comments on your post
+exports.onCommentAdd = functions.firestore
+  .document("comments/{commentId}")
+  .onCreate((snap, context) => {
+    const db = admin.firestore();
+    const data = snap.data();
+    var postRef = db.collection("posts").doc(data.postId);
+
+    return postRef.get().then(function(postDoc) {
+    //POSTDOC
+    console.log(postDoc);
+      db.collection("tokens").doc(postDoc.data().UserID).get()
+        .then(function(tokenDoc) {
+          var userToken = tokenDoc.data().token;
+
+          var message = {
+            data: {
+              title: `Jambox`,
+              body: `Someone commented on your post!!`
+            },
+            token: userToken
+          };
+          console.log(message);
+  
+          admin
+            .messaging()
+            .send(message)
+            .then(respone => {
+              console.log("Successfully sent message:", respone);
+            })
+            .catch(error => {
+              console.log("Error sending message", error);
+            });          
+        })
+    })
+    .catch(function (error) {
+      console.log("Error getting document: ", error);
+    });
+  });
+
+//Returns follower count for a specific person
+exports.getUsersFollowerCount = functions.https
+  .onRequest((req, res) => {
 
   const followedId = req.uid;
   const db = admin.firestore();
