@@ -93,7 +93,7 @@ exports.onPostLike = functions.firestore
       .get()
       .then(function (postdoc) {
         //POST DOC
-        if (postdoc.exists) {
+        if (postdoc.exists && postdoc.data().UserID != data.userId) {
           console.log("postdoc: ", postdoc.data().UserID);
           db.collection("tokens")
             .doc(postdoc.data().UserID)
@@ -252,6 +252,7 @@ exports.onCommentAdd = functions.firestore
     return postRef.get().then(function(postDoc) {
     //POSTDOC
     console.log(postDoc);
+    if(postDoc.data().UserID != data.UserID) {
       db.collection("tokens").doc(postDoc.data().UserID).get()
         .then(function(tokenDoc) {
           var userToken = tokenDoc.data().token;
@@ -275,6 +276,7 @@ exports.onCommentAdd = functions.firestore
               console.log("Error sending message", error);
             });          
         })
+      }
     })
     .catch(function (error) {
       console.log("Error getting document: ", error);
