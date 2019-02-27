@@ -85,6 +85,7 @@ exports.onPostLike = functions.firestore
   .onCreate((snap, context) => {
     const db = admin.firestore();
     const data = snap.data();
+    const newcreatedAt = new Date();
     var userRef = db.collection("users").doc(data.userId);
     var postRef = db.collection("posts").doc(data.postId);
     var userToken = "";
@@ -93,8 +94,8 @@ exports.onPostLike = functions.firestore
       .get()
       .then(function (postdoc) {
         //POST DOC
-        if (postdoc.exists && postdoc.data().UserID != data.userId) {
-          console.log("postdoc: ", postdoc.data().UserID);
+        if(postdoc.data().UserID != data.userId) {
+          console.log("postdoc: ", postdoc.data());
           db.collection("tokens")
             .doc(postdoc.data().UserID)
             .get()
@@ -106,17 +107,16 @@ exports.onPostLike = functions.firestore
                 //USER DOC
                 console.log("userDoc: ", userdoc);
                 let username = userdoc.data().displayName;
-                console.log("username: ", username);
 
                 var message = {
                   data: {
-                    title: "Jambox App",
+                    title: "Jambox",
                     body: `${username} liked your post!`
                   },
                   token: userToken
                 };
                 console.log(message);
-
+        
                 admin
                   .messaging()
                   .send(message)
@@ -126,11 +126,19 @@ exports.onPostLike = functions.firestore
                   .catch(error => {
                     console.log("Error sending message", error);
                   });
+                  admin.firestore().collection("notifications").add({
+                    userId: postdoc.data().UserID,
+                    createdAt: newcreatedAt,
+                    body: `${username} liked your post!`,
+                    type: 'like',
+                    read: false
+                  }); 
               });
             });
         } else {
           console.log("No such document!");
         }
+        
       })
       .catch(function (error) {
         console.log("Error getting document:", error);
@@ -204,41 +212,50 @@ exports.onFollowAdd = functions.firestore
   .onCreate((snap, context) => {
     const db = admin.firestore();
     const data = snap.data();
+    const newcreatedAt = new Date();
     var tokenRef = db.collection("tokens").doc(data.followedId);
     var followerRef = db.collection("users").doc(data.followerId);
 
-    return tokenRef.get().then(function(tokenDoc) {
-    //TOKEN DOC
-    console.log(tokenDoc.data());
-      var userToken = tokenDoc.data().token;
-      followerRef.get().then(function(followerDoc) {
-      //FOLLOWER DOC
-        var username = followerDoc.data().displayName;
-
-        var message = {
-          data: {
-            title: `Jambox`,
-            body: `${username} started following you!`
-          },
-          token: userToken
-        };
-        console.log(message);
-
-        admin
-          .messaging()
-          .send(message)
-          .then(respone => {
-            console.log("Successfully sent message:", respone);
-          })
-          .catch(error => {
-            console.log("Error sending message", error);
+      return tokenRef.get().then(function(tokenDoc) {
+        //TOKEN DOC
+        console.log(tokenDoc.data());
+          var userToken = tokenDoc.data().token;
+          followerRef.get().then(function(followerDoc) {
+          //FOLLOWER DOC
+            var username = followerDoc.data().displayName;
+    
+            var message = {
+              data: {
+                title: `Jambox`,
+                body: `${username} started following you!`
+              },
+              token: userToken
+            };
+            console.log(message);
+            
+            
+            admin
+              .messaging()
+              .send(message)
+              .then(respone => {
+                console.log("Successfully sent message:", respone);
+              })
+              .catch(error => {
+                console.log("Error sending message", error);
+              });
+              admin.firestore().collection("notifications").add({
+                userId: data.followedId,
+                createdAt: newcreatedAt,
+                body: `${username} started following you!`,
+                type: 'follow',
+                read: false
+              }); 
           });
-
-      });
-    })
-    .catch(function (error) {
-      console.log("Error getting document: ", error);
-    });
+        })
+        .catch(function (error) {
+          console.log("Error getting document: ", error);
+        });
+    
   });
 
 //Sends notification when someone comments on your post
@@ -247,6 +264,7 @@ exports.onCommentAdd = functions.firestore
   .onCreate((snap, context) => {
     const db = admin.firestore();
     const data = snap.data();
+    const newcreatedAt = new Date();
     var postRef = db.collection("posts").doc(data.postId);
 
     return postRef.get().then(function(postDoc) {
@@ -256,15 +274,16 @@ exports.onCommentAdd = functions.firestore
       db.collection("tokens").doc(postDoc.data().UserID).get()
         .then(function(tokenDoc) {
           var userToken = tokenDoc.data().token;
+          var username = data.postedBy;
 
           var message = {
             data: {
               title: `Jambox`,
-              body: `Someone commented on your post!!`
+              body: `${username} commented on your post!`
             },
             token: userToken
           };
-          console.log(message);
+          console.log(message);  
   
           admin
             .messaging()
@@ -274,7 +293,15 @@ exports.onCommentAdd = functions.firestore
             })
             .catch(error => {
               console.log("Error sending message", error);
-            });          
+            });  
+
+            admin.firestore().collection("notifications").add({
+              userId: postDoc.data().UserID,
+              createdAt: newcreatedAt,
+              body: `${username} commented on your post!`,
+              type: 'comment',
+              read: false
+            });        
         })
       }
     })
@@ -293,4 +320,4 @@ exports.getUsersFollowerCount = functions.https
   var query = followers.where('followedid', '==', followedId).get()
 
   return query.length
-});
+  });
