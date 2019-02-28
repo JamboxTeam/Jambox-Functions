@@ -270,7 +270,7 @@ exports.onCommentAdd = functions.firestore
     return postRef.get().then(function(postDoc) {
     //POSTDOC
     console.log(postDoc.data());
-    if(postDoc.data().UserID != data.UserID) {
+    if(postDoc.data().UserID != data.SenderID) {
       db.collection("tokens").doc(postDoc.data().UserID).get()
         .then(function(tokenDoc) {
           var userToken = tokenDoc.data().token;
