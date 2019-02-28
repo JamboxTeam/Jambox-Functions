@@ -64,7 +64,17 @@ exports.addCreatedAtUser = functions.firestore
 exports.addCreatedAtPost = functions.firestore
   .document("posts/{postId}")
   .onCreate((snap, context) => {
+    const db = admin.firestore();
     const newcreatedAt = new Date();
+    const data = snap.data();
+    const tagRef = db.collection("tags");
+
+    data.tags.forEach(tag => {
+      console.log("adding tag", tag)
+      db.collection("tags").doc.set({
+        tag: tag
+      });
+    });
 
     return admin
       .firestore()
