@@ -71,9 +71,9 @@ exports.addCreatedAtPost = functions.firestore
 
     data.tags.forEach(tag => {
       console.log("adding tag", tag)
-      db.collection("tags").doc.set({
+      db.collection("tags").add({
         tag: tag
-      });
+      })
     });
 
     return admin
