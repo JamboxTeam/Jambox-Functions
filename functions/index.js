@@ -64,17 +64,7 @@ exports.addCreatedAtUser = functions.firestore
 exports.addCreatedAtPost = functions.firestore
   .document("posts/{postId}")
   .onCreate((snap, context) => {
-    const db = admin.firestore();
     const newcreatedAt = new Date();
-    const data = snap.data();
-    const tagRef = db.collection("tags");
-
-    data.tags.forEach(tag => {
-      console.log("adding tag", tag)
-      db.collection("tags").add({
-        tag: tag
-      })
-    });
 
     return admin
       .firestore()
@@ -87,6 +77,21 @@ exports.addCreatedAtPost = functions.firestore
         { merge: true }
       )
       .catch(err => console.log(err));
+  });
+
+//Adds tags from a post to tags collection
+exports.onPostCreate = functions.firestore
+  .document("posts/{postId}")
+  .onCreate((snap, context) => {
+    const db = admin.firestore();
+    const data = snap.data();
+
+    return data.tags.forEach(tag => {
+      console.log("adding tag", tag)
+      db.collection("tags").add({
+        tag: tag
+      })
+    });
   });
 
 //Sends notification when someone likes your post
