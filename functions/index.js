@@ -1,8 +1,75 @@
+"use strict";
+
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
-
 admin.initializeApp();
+const express = require("express");
+const cookieParser = require("cookie-parser")();
+const cors = require("cors")({ origin: true });
+const app = express();
 
+const validateFirebaseIdToken = (req, res, next) => {
+  console.log("Check if request is authorized with Firebase ID token");
+
+  if (
+    (!req.headers.authorization ||
+      !req.headers.authorization.startsWith("Bearer ")) &&
+    !(req.cookies && req.cookies.__session)
+  ) {
+    console.error(
+      "No Firebase ID token was passed as a Bearer token in the Authorization header.",
+      "Make sure you authorize your request by providing the following HTTP header:",
+      "Authorization: Bearer <Firebase ID Token>",
+      'or by passing a "__session" cookie.'
+    );
+    res.status(403).send("Unauthorized");
+    return;
+  }
+  let idToken;
+  if (
+    req.headers.authorization &&
+    req.headers.authorization.startsWith("Bearer ")
+  ) {
+    console.log('Found "Authorization" header');
+    // Read the ID Token from the Authorization header.
+    idToken = req.headers.authorization.split("Bearer ")[1];
+  } else if (req.cookies) {
+    console.log('Found "__session" cookie');
+    // Read the ID Token from cookie.
+    idToken = req.cookies.__session;
+  } else {
+    // No cookie
+    res.status(403).send("Unauthorized");
+    return;
+  }
+
+  admin
+    .auth()
+    .verifyIdToken(idToken)
+    .then(decodedIdToken => {
+      console.log("ID Token correctly decoded", decodedIdToken);
+      req.user = decodedIdToken;
+      return next();
+    })
+    .catch(error => {
+      console.error("Error while verifying Firebase ID token:", error);
+      res.status(403).send("Unauthorized");
+    });
+};
+
+app.use(cors);
+app.use(cookieParser);
+app.use(validateFirebaseIdToken);
+
+app.get("/hello", (req, res) => {
+  const newDate = new Date();
+  res.status(200).json({
+    date: newDate
+  });
+  res.send(`seconds: ${newDate.getSeconds()}`);
+});
+
+exports.app = functions.https.onRequest(app);
 //Adds a created time to created message
 exports.addCreatedAtMessage = functions.firestore
   .document("messages/{messageId}")
@@ -87,10 +154,10 @@ exports.onPostCreate = functions.firestore
     const data = snap.data();
 
     return data.tags.forEach(tag => {
-      console.log("adding tag", tag)
-      db.collection("tags").add({
+      console.log("adding tag", tag);
+      db.collection("tags").doc(tag).set({
         tag: tag
-      })
+      });
     });
   });
 
@@ -107,18 +174,18 @@ exports.onPostLike = functions.firestore
 
     return postRef
       .get()
-      .then(function (postdoc) {
+      .then(function(postdoc) {
         //POST DOC
-        if(postdoc.data().UserID != data.userId) {
+        if (postdoc.data().UserID != data.userId) {
           console.log("postdoc: ", postdoc.data());
           db.collection("tokens")
             .doc(postdoc.data().UserID)
             .get()
-            .then(function (tokendoc) {
+            .then(function(tokendoc) {
               //TOKEN DOC
               console.log("tokenDoc: ", tokendoc.data().token);
               userToken = tokendoc.data().token;
-              userRef.get().then(function (userdoc) {
+              userRef.get().then(function(userdoc) {
                 //USER DOC
                 console.log("userDoc: ", userdoc);
                 let username = userdoc.data().displayName;
@@ -131,7 +198,7 @@ exports.onPostLike = functions.firestore
                   token: userToken
                 };
                 console.log(message);
-        
+
                 admin
                   .messaging()
                   .send(message)
@@ -141,21 +208,23 @@ exports.onPostLike = functions.firestore
                   .catch(error => {
                     console.log("Error sending message", error);
                   });
-                  admin.firestore().collection("notifications").add({
+                admin
+                  .firestore()
+                  .collection("notifications")
+                  .add({
                     userId: postdoc.data().UserID,
                     createdAt: newcreatedAt,
                     body: `${username} liked your post!`,
-                    type: 'like',
+                    type: "like",
                     read: false
-                  }); 
+                  });
               });
             });
         } else {
           console.log("No such document!");
         }
-        
       })
-      .catch(function (error) {
+      .catch(function(error) {
         console.log("Error getting document:", error);
       });
   });
@@ -167,56 +236,96 @@ exports.onMessageAdd = functions.firestore
     const db = admin.firestore();
     const data = snap.data();
     var privateChatsRef = db.collection("privatechats").doc(data.chatRoomID);
+    var groupChatsRef = db.collection("groupchats").doc(data.chatRoomID);
     var senderRef = db.collection("users").doc(data.senderID);
 
     return privateChatsRef
       .get()
-      .then(function (privateChatDoc) {
+      .then(function(privateChatDoc) {
         //PRIVATE CHAT DOC
         if (privateChatDoc.exists) {
           console.log("privatechatdoc ", privateChatDoc.data());
           privateChatDoc.data().members.forEach(member => {
-            if(member != data.senderID){
-            db.collection("tokens")
-              .doc(member)
-              .get()
-              .then(function(tokenDoc) {
-                //TOKEN DOC
-                console.log("tokenDoc", tokenDoc.data());
-                let userToken = tokenDoc.data().token;
-                senderRef.get().then(function(senderDoc) {
-                  //SENDER DOC
-                  console.log("senderDoc", senderDoc.data());
-                  let username = senderDoc.data().displayName;
+            if (member != data.senderID) {
+              db.collection("tokens")
+                .doc(member)
+                .get()
+                .then(function(tokenDoc) {
+                  //TOKEN DOC
+                  console.log("tokenDoc", tokenDoc.data());
+                  let userToken = tokenDoc.data().token;
+                  senderRef.get().then(function(senderDoc) {
+                    //SENDER DOC
+                    console.log("senderDoc", senderDoc.data());
+                    let username = senderDoc.data().displayName;
 
-                  var message = {
-                    data: {
-                      title: `Jambox`,
-                      body: `${username}: ${data.message}`
-                    },
-                    token: userToken
-                  };
-                  console.log(message);
+                    var message = {
+                      data: {
+                        title: `Jambox`,
+                        body: `${username}: ${data.message}`
+                      },
+                      token: userToken
+                    };
+                    console.log(message);
 
-                  admin
-                    .messaging()
-                    .send(message)
-                    .then(respone => {
-                      console.log("Successfully sent message:", respone);
-                    })
-                    .catch(error => {
-                      console.log("Error sending message", error);
-                    });
+                    admin
+                      .messaging()
+                      .send(message)
+                      .then(respone => {
+                        console.log("Successfully sent message:", respone);
+                      })
+                      .catch(error => {
+                        console.log("Error sending message", error);
+                      });
                   });
                 });
             }
             //end loop
           });
         } else {
-          console.log("No such document");
+          groupChatsRef.get().then(function(groupChatDoc) {
+            console.log("groupchatdoc ", groupChatDoc.data());
+            groupChatDoc.data().members.forEach(member => {
+              if (member != data.senderID) {
+                db.collection("tokens")
+                  .doc(member)
+                  .get()
+                  .then(function(tokenDoc) {
+                    //TOKEN DOC
+                    console.log("tokenDoc", tokenDoc.data());
+                    let userToken = tokenDoc.data().token;
+                    senderRef.get().then(function(senderDoc) {
+                      //SENDER DOC
+                      console.log("senderDoc", senderDoc.data());
+                      let username = senderDoc.data().displayName;
+
+                      var message = {
+                        data: {
+                          title: `Jambox`,
+                          body: `${username}: ${data.message}`
+                        },
+                        token: userToken
+                      };
+                      console.log(message);
+
+                      admin
+                        .messaging()
+                        .send(message)
+                        .then(respone => {
+                          console.log("Successfully sent message:", respone);
+                        })
+                        .catch(error => {
+                          console.log("Error sending message", error);
+                        });
+                    });
+                  });
+              }
+              //end loop
+            });
+          });
         }
       })
-      .catch(function (error) {
+      .catch(function(error) {
         console.log("Error getting document: ", error);
       });
   });
@@ -231,46 +340,49 @@ exports.onFollowAdd = functions.firestore
     var tokenRef = db.collection("tokens").doc(data.followedId);
     var followerRef = db.collection("users").doc(data.followerId);
 
-      return tokenRef.get().then(function(tokenDoc) {
+    return tokenRef
+      .get()
+      .then(function(tokenDoc) {
         //TOKEN DOC
         console.log(tokenDoc.data());
-          var userToken = tokenDoc.data().token;
-          followerRef.get().then(function(followerDoc) {
+        var userToken = tokenDoc.data().token;
+        followerRef.get().then(function(followerDoc) {
           //FOLLOWER DOC
-            var username = followerDoc.data().displayName;
-    
-            var message = {
-              data: {
-                title: `Jambox`,
-                body: `${username} started following you!`
-              },
-              token: userToken
-            };
-            console.log(message);
-            
-            
-            admin
-              .messaging()
-              .send(message)
-              .then(respone => {
-                console.log("Successfully sent message:", respone);
-              })
-              .catch(error => {
-                console.log("Error sending message", error);
-              });
-              admin.firestore().collection("notifications").add({
-                userId: data.followedId,
-                createdAt: newcreatedAt,
-                body: `${username} started following you!`,
-                type: 'follow',
-                read: false
-              }); 
-          });
-        })
-        .catch(function (error) {
-          console.log("Error getting document: ", error);
+          var username = followerDoc.data().displayName;
+
+          var message = {
+            data: {
+              title: `Jambox`,
+              body: `${username} started following you!`
+            },
+            token: userToken
+          };
+          console.log(message);
+
+          admin
+            .messaging()
+            .send(message)
+            .then(respone => {
+              console.log("Successfully sent message:", respone);
+            })
+            .catch(error => {
+              console.log("Error sending message", error);
+            });
+          admin
+            .firestore()
+            .collection("notifications")
+            .add({
+              userId: data.followedId,
+              createdAt: newcreatedAt,
+              body: `${username} started following you!`,
+              type: "follow",
+              read: false
+            });
         });
-    
+      })
+      .catch(function(error) {
+        console.log("Error getting document: ", error);
+      });
   });
 
 //Sends notification when someone comments on your post
@@ -282,57 +394,62 @@ exports.onCommentAdd = functions.firestore
     const newcreatedAt = new Date();
     var postRef = db.collection("posts").doc(data.postId);
 
-    return postRef.get().then(function(postDoc) {
-    //POSTDOC
-    console.log(postDoc.data());
-    if(postDoc.data().UserID != data.userID) {
-      db.collection("tokens").doc(postDoc.data().UserID).get()
-        .then(function(tokenDoc) {
-          var userToken = tokenDoc.data().token;
-          var username = data.postedBy;
+    return postRef
+      .get()
+      .then(function(postDoc) {
+        //POSTDOC
+        console.log(postDoc.data());
+        if (postDoc.data().UserID != data.userID) {
+          db.collection("tokens")
+            .doc(postDoc.data().UserID)
+            .get()
+            .then(function(tokenDoc) {
+              var userToken = tokenDoc.data().token;
+              var username = data.postedBy;
 
-          var message = {
-            data: {
-              title: `Jambox`,
-              body: `${username} commented on your post!`
-            },
-            token: userToken
-          };
-          console.log(message);  
-  
-          admin
-            .messaging()
-            .send(message)
-            .then(respone => {
-              console.log("Successfully sent message:", respone);
-            })
-            .catch(error => {
-              console.log("Error sending message", error);
-            });  
+              var message = {
+                data: {
+                  title: `Jambox`,
+                  body: `${username} commented on your post!`
+                },
+                token: userToken
+              };
+              console.log(message);
 
-            admin.firestore().collection("notifications").add({
-              userId: postDoc.data().UserID,
-              createdAt: newcreatedAt,
-              body: `${username} commented on your post!`,
-              type: 'comment',
-              read: false
-            });        
-        })
-      }
-    })
-    .catch(function (error) {
-      console.log("Error getting document: ", error);
-    });
+              admin
+                .messaging()
+                .send(message)
+                .then(respone => {
+                  console.log("Successfully sent message:", respone);
+                })
+                .catch(error => {
+                  console.log("Error sending message", error);
+                });
+
+              admin
+                .firestore()
+                .collection("notifications")
+                .add({
+                  userId: postDoc.data().UserID,
+                  createdAt: newcreatedAt,
+                  body: `${username} commented on your post!`,
+                  type: "comment",
+                  read: false
+                });
+            });
+        }
+      })
+      .catch(function(error) {
+        console.log("Error getting document: ", error);
+      });
   });
 
 //Returns follower count for a specific person
-exports.getUsersFollowerCount = functions.https
-  .onRequest((req, res) => {
-
+exports.getUsersFollowerCount = functions.https.onRequest((req, res) => {
   const followedId = req.uid;
   const db = admin.firestore();
-  var followers = db.collection("relationships")
-  var query = followers.where('followedid', '==', followedId).get()
+  var followers = db.collection("relationships");
+  var query = followers.where("followedid", "==", followedId).get();
 
-  return query.length
-  });
+  return query.length;
+});
