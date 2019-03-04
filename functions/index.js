@@ -161,6 +161,79 @@ exports.onPostCreate = functions.firestore
     });
   });
 
+//Sends notification when someone @'s you in a post
+exports.onPostCreateAtting = functions.firestore
+  .document("posts/{postId}")
+  .onCreate((snap, context) => {
+    const db = admin.firestore();
+    const data = snap.data();
+    var userToken = "";
+    var username;
+    var value = "oof";
+    var userRef = db.collection("users").doc(data.userID);
+
+    userRef.get().then((postUserDoc) => {
+      username = postUserDoc.data().displayName;
+    });
+
+
+
+    data.taggedUsers.forEach(taggedUser => {
+      db.collection("users")
+      .doc(taggedUser)
+      .get()
+      .then(function(userDoc) {
+        //USER DOC
+        console.log("userDoc", userDoc.data());
+
+        db.collection("tokens").doc(userDoc.data().uid)
+        .get()
+        .then(function(tokenDoc) {
+          //TOKEN DOC
+          console.log("tokenDoc", tokenDoc.data());
+          userToken = tokenDoc.data().token;
+
+          var message = {
+            data: {
+              title: `Jambox`,
+              body: `You were tagged in a post by ${username}`
+            },
+            token: userToken
+          };
+          console.log(message);
+
+          admin
+            .messaging()
+            .send(message)
+            .then(respone => {
+              console.log("Successfully sent message:", respone);
+              value = "nice";
+            })
+            .catch(error => {
+              console.log("Error sending message", error);
+              value = "oof";
+            });
+            admin
+                  .firestore()
+                  .collection("notifications")
+                  .add({
+                    userId: userDoc.data().uid,
+                    createdAt: newcreatedAt,
+                    body: `You were tagged in a post by ${username}`,
+                    type: "tagged",
+                    read: false
+              });
+        });
+      })
+      .catch(function(error) {
+        console.log("Error getting document:", error);
+      });
+
+    });
+
+    return value;
+  });
+
 //Sends notification when someone likes your post
 exports.onPostLike = functions.firestore
   .document("likes/{likeId}")
@@ -277,6 +350,18 @@ exports.onMessageAdd = functions.firestore
                       .catch(error => {
                         console.log("Error sending message", error);
                       });
+                    admin
+                      .firestore()
+                      .collection("notifications")
+                      .add({
+                        userId: member,
+                        createdAt: newcreatedAt,
+                        body: `${username}: ${data.message}`,
+                        chatRoomID: data.chatRoomID,
+                        type: "message",
+                        read: false
+                      });
+                    
                   });
                 });
             }
@@ -316,6 +401,17 @@ exports.onMessageAdd = functions.firestore
                         })
                         .catch(error => {
                           console.log("Error sending message", error);
+                        });
+                      admin
+                        .firestore()
+                        .collection("notifications")
+                        .add({
+                          userId: member,
+                          createdAt: newcreatedAt,
+                          body: `${username}: ${data.message}`,
+                          chatRoomID: data.chatRoomID,
+                          type: "message",
+                          read: false
                         });
                     });
                   });
