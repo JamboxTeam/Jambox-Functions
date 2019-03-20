@@ -1,5 +1,7 @@
 {
   "projects": {
-    "default": "jamboxmusicapp"
+    "default": "jamboxmusicapp",
+    "testdb": "testdb-c62e5",
+    "prod": "jamboxproduction-327c8"
   }
 }

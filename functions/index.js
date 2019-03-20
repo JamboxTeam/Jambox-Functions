@@ -155,7 +155,7 @@ exports.onPostCreate = functions.firestore
 
     return data.tags.forEach(tag => {
       console.log("adding tag", tag);
-      db.collection("tags").doc(tag).set({
+      db.collection("tags").doc(tag.toLowerCase()).set({
         tag: tag
       });
     });
